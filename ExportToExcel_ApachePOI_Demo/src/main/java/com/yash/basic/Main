@@ -1,0 +1,60 @@
+package com.example;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+
+public class Main {
+
+    private static final long START_NUMBER = 9000000000L;
+    private static final long END_NUMBER = 9000009999L; // Adjust as needed
+    private static final long MAX_LINES_PER_FILE = 1000000; // Adjust as needed
+    private static final String OUTPUT_DIR = "src/main/resources/output/";
+
+    public static void main(String[] args) {
+        // Create output directory if it doesn't exist
+        File directory = new File(OUTPUT_DIR);
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
+
+        generatePhoneNumbers(START_NUMBER, END_NUMBER, MAX_LINES_PER_FILE);
+    }
+
+    private static void generatePhoneNumbers(long start, long end, long maxLinesPerFile) {
+        long fileCount = 1;
+        long currentLineCount = 0;
+        BufferedWriter writer = null;
+
+        try {
+            writer = new BufferedWriter(new FileWriter(OUTPUT_DIR + "phone_numbers_" + fileCount + ".csv"));
+            writer.write("Phone Number\n"); // Write header
+
+            for (long number = start; number <= end; number++) {
+                writer.write(number + "\n");
+                currentLineCount++;
+
+                if (currentLineCount >= maxLinesPerFile) {
+                    writer.close();
+                    fileCount++;
+                    currentLineCount = 0;
+                    writer = new BufferedWriter(new FileWriter(OUTPUT_DIR + "phone_numbers_" + fileCount + ".csv"));
+                    writer.write("Phone Number\n"); // Write header for new file
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (writer != null) {
+                    writer.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        System.out.println("CSV files generated successfully in " + OUTPUT_DIR);
+    }
+}
