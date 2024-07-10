@@ -15,6 +15,7 @@ public class Main {
     private static final long START_NUMBER = 9000000000L;
     private static final long END_NUMBER = 9999999999L; // Adjust as needed
     private static final long MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB (adjust as needed)
+    private static final int MAX_ROWS_PER_SHEET = 1048575; // Maximum rows per sheet in Excel
     private static final String OUTPUT_DIR = "src/main/resources/output/";
 
     public static void main(String[] args) {
@@ -29,42 +30,48 @@ public class Main {
 
     private static void generatePhoneNumbersToExcel(long start, long end, long maxFileSizeBytes) {
         Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("Phone Numbers");
-
-        AtomicLong currentFileBytes = new AtomicLong(0);
-        int fileCount = 1;
-        int rowCount = 0;
+        AtomicLong currentSheetRows = new AtomicLong(0);
+        AtomicLong currentWorkbookBytes = new AtomicLong(0);
+        int sheetCount = 1;
+        Sheet currentSheet = workbook.createSheet("Sheet_" + sheetCount);
+        Row currentRow = null;
 
         for (long number = start; number <= end; number++) {
-            if (currentFileBytes.get() >= maxFileSizeBytes) {
-                saveWorkbook(workbook, fileCount);
-                fileCount++;
+            if (currentSheetRows.get() >= MAX_ROWS_PER_SHEET) {
+                saveWorkbook(workbook, sheetCount);
+                sheetCount++;
                 workbook = new XSSFWorkbook();
-                sheet = workbook.createSheet("Phone Numbers");
-                currentFileBytes.set(0);
-                rowCount = 0;
+                currentSheet = workbook.createSheet("Sheet_" + sheetCount);
+                currentSheetRows.set(0);
+                currentWorkbookBytes.set(0);
             }
 
-            Row row;
-            if (rowCount <= sheet.getLastRowNum()) {
-                row = sheet.getRow(rowCount);
-            } else {
-                row = sheet.createRow(rowCount);
+            if (currentRow == null || currentRow.getRowNum() > MAX_ROWS_PER_SHEET) {
+                currentRow = currentSheet.createRow((int) currentSheetRows.getAndIncrement());
+                currentWorkbookBytes.addAndGet(Long.SIZE / 8); // Long.SIZE / 8 bytes per number
             }
-            row.createCell(0).setCellValue(number);
 
-            rowCount++;
-            currentFileBytes.addAndGet(Long.SIZE / 8); // Long.SIZE / 8 bytes per number
+            currentRow.createCell(0).setCellValue(number);
+            currentWorkbookBytes.addAndGet(Long.SIZE / 8); // Long.SIZE / 8 bytes per number
+
+            if (currentWorkbookBytes.get() >= maxFileSizeBytes) {
+                saveWorkbook(workbook, sheetCount);
+                sheetCount++;
+                workbook = new XSSFWorkbook();
+                currentSheet = workbook.createSheet("Sheet_" + sheetCount);
+                currentSheetRows.set(0);
+                currentWorkbookBytes.set(0);
+            }
         }
 
         // Save the last workbook
-        saveWorkbook(workbook, fileCount);
+        saveWorkbook(workbook, sheetCount);
 
         System.out.println("Excel files generated successfully in " + OUTPUT_DIR);
     }
 
-    private static void saveWorkbook(Workbook workbook, int fileCount) {
-        String fileName = OUTPUT_DIR + "phone_numbers_" + fileCount + ".xlsx";
+    private static void saveWorkbook(Workbook workbook, int sheetCount) {
+        String fileName = OUTPUT_DIR + "phone_numbers_" + sheetCount + ".xlsx";
         try (FileOutputStream fileOut = new FileOutputStream(fileName)) {
             workbook.write(fileOut);
             System.out.println("File saved: " + fileName);
