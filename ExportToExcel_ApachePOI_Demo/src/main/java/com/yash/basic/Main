@@ -1,60 +1,66 @@
 package com.example;
 
-import java.io.BufferedWriter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 public class Main {
 
     private static final long START_NUMBER = 9000000000L;
-    private static final long END_NUMBER = 9000009999L; // Adjust as needed
-    private static final long MAX_LINES_PER_FILE = 1000000; // Adjust as needed
-    private static final String OUTPUT_DIR = "src/main/resources/output/";
+    private static final long END_NUMBER = 9999999999L; // Adjust as needed
+    private static final int MAX_NUMBERS_PER_COLUMN = 1000000; // Adjust as needed
+    private static final String OUTPUT_FILE = "src/main/resources/output/phone_numbers.xlsx";
 
     public static void main(String[] args) {
         // Create output directory if it doesn't exist
-        File directory = new File(OUTPUT_DIR);
+        File directory = new File("src/main/resources/output/");
         if (!directory.exists()) {
             directory.mkdirs();
         }
 
-        generatePhoneNumbers(START_NUMBER, END_NUMBER, MAX_LINES_PER_FILE);
+        generatePhoneNumbersToExcel(START_NUMBER, END_NUMBER, MAX_NUMBERS_PER_COLUMN);
     }
 
-    private static void generatePhoneNumbers(long start, long end, long maxLinesPerFile) {
-        long fileCount = 1;
-        long currentLineCount = 0;
-        BufferedWriter writer = null;
+    private static void generatePhoneNumbersToExcel(long start, long end, int maxNumbersPerColumn) {
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Phone Numbers");
 
-        try {
-            writer = new BufferedWriter(new FileWriter(OUTPUT_DIR + "phone_numbers_" + fileCount + ".csv"));
-            writer.write("Phone Number\n"); // Write header
+        long currentNumber = start;
+        int column = 0;
+        int rowCount = 0;
 
-            for (long number = start; number <= end; number++) {
-                writer.write(number + "\n");
-                currentLineCount++;
-
-                if (currentLineCount >= maxLinesPerFile) {
-                    writer.close();
-                    fileCount++;
-                    currentLineCount = 0;
-                    writer = new BufferedWriter(new FileWriter(OUTPUT_DIR + "phone_numbers_" + fileCount + ".csv"));
-                    writer.write("Phone Number\n"); // Write header for new file
+        while (currentNumber <= end) {
+            for (int i = 0; i < maxNumbersPerColumn && currentNumber <= end; i++) {
+                Row row;
+                if (rowCount <= sheet.getLastRowNum()) {
+                    row = sheet.getRow(rowCount);
+                } else {
+                    row = sheet.createRow(rowCount);
                 }
+                row.createCell(column).setCellValue(currentNumber++);
+                rowCount++;
             }
+            rowCount = 0;
+            column++;
+        }
+
+        try (FileOutputStream fileOut = new FileOutputStream(OUTPUT_FILE)) {
+            workbook.write(fileOut);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             try {
-                if (writer != null) {
-                    writer.close();
-                }
+                workbook.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        System.out.println("CSV files generated successfully in " + OUTPUT_DIR);
+        System.out.println("Excel file generated successfully: " + OUTPUT_FILE);
     }
 }
