@@ -30,37 +30,29 @@ public class Main {
 
     private static void generatePhoneNumbersToExcel(long start, long end, long maxFileSizeBytes) {
         Workbook workbook = new XSSFWorkbook();
-        AtomicLong currentSheetRows = new AtomicLong(0);
         AtomicLong currentWorkbookBytes = new AtomicLong(0);
         int sheetCount = 1;
         Sheet currentSheet = workbook.createSheet("Sheet_" + sheetCount);
         Row currentRow = null;
 
         for (long number = start; number <= end; number++) {
-            if (currentSheetRows.get() >= MAX_ROWS_PER_SHEET) {
-                saveWorkbook(workbook, sheetCount);
-                sheetCount++;
-                workbook = new XSSFWorkbook();
-                currentSheet = workbook.createSheet("Sheet_" + sheetCount);
-                currentSheetRows.set(0);
-                currentWorkbookBytes.set(0);
-            }
-
             if (currentRow == null || currentRow.getRowNum() > MAX_ROWS_PER_SHEET) {
-                currentRow = currentSheet.createRow((int) currentSheetRows.getAndIncrement());
-                currentWorkbookBytes.addAndGet(Long.SIZE / 8); // Long.SIZE / 8 bytes per number
+                currentSheet = workbook.createSheet("Sheet_" + sheetCount++);
+                currentRow = null;
             }
 
-            currentRow.createCell(0).setCellValue(number);
+            if (currentRow == null) {
+                currentRow = currentSheet.createRow(0); // Create new row
+            }
+
+            currentRow.createCell((int) currentRow.getLastCellNum()).setCellValue(number);
             currentWorkbookBytes.addAndGet(Long.SIZE / 8); // Long.SIZE / 8 bytes per number
 
             if (currentWorkbookBytes.get() >= maxFileSizeBytes) {
                 saveWorkbook(workbook, sheetCount);
-                sheetCount++;
                 workbook = new XSSFWorkbook();
-                currentSheet = workbook.createSheet("Sheet_" + sheetCount);
-                currentSheetRows.set(0);
                 currentWorkbookBytes.set(0);
+                sheetCount = 1;
             }
         }
 
@@ -74,7 +66,7 @@ public class Main {
         String fileName = OUTPUT_DIR + "phone_numbers_" + sheetCount + ".xlsx";
         try (FileOutputStream fileOut = new FileOutputStream(fileName)) {
             workbook.write(fileOut);
-            System.out.println("File saved: " + fileName);
+            System.out.println("File saved: " + fileName + ", Size: " + (fileOut.getChannel().size() / (1024 * 1024)) + " MB");
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
