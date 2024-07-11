@@ -9,22 +9,56 @@ public class Main {
 
     private static final long START_NUMBER = 9000000000L;
     private static final long END_NUMBER = 9999999999L;
+    private static final long MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
+    private static final String OUTPUT_DIR = "src/main/resources/output/";
 
     public static void main(String[] args) {
         generatePhoneNumbersToFile(START_NUMBER, END_NUMBER);
     }
 
     private static void generatePhoneNumbersToFile(long start, long end) {
-        File outputFile = new File("src/main/resources/output/phone_numbers.txt");
+        // Create output directory if it doesn't exist
+        File directory = new File(OUTPUT_DIR);
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+        int fileIndex = 1;
+        long currentFileSize = 0;
+        BufferedWriter writer = null;
+
+        try {
+            File outputFile = new File(OUTPUT_DIR + "phone_numbers_" + fileIndex + ".txt");
+            writer = new BufferedWriter(new FileWriter(outputFile));
+            
             for (long number = start; number <= end; number++) {
-                writer.write(String.valueOf(number));
+                String phoneNumber = String.valueOf(number);
+                writer.write(phoneNumber);
                 writer.newLine();
+                currentFileSize += phoneNumber.length() + System.lineSeparator().length();
+
+                // Check if the current file size exceeds the limit
+                if (currentFileSize >= MAX_FILE_SIZE_BYTES) {
+                    writer.close();
+                    System.out.println("File saved: " + outputFile.getAbsolutePath() + ", Size: " + currentFileSize / (1024 * 1024) + " MB");
+                    fileIndex++;
+                    outputFile = new File(OUTPUT_DIR + "phone_numbers_" + fileIndex + ".txt");
+                    writer = new BufferedWriter(new FileWriter(outputFile));
+                    currentFileSize = 0;
+                }
             }
-            System.out.println("Phone numbers saved to: " + outputFile.getAbsolutePath());
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
+
+        System.out.println("All phone numbers saved to files in " + OUTPUT_DIR);
     }
 }
