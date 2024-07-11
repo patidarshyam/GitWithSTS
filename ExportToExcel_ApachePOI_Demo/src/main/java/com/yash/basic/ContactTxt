@@ -5,7 +5,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
-public class Main {
+public class ContactTxt {
 
     private static final long START_NUMBER = 9000000000L;
     private static final long END_NUMBER = 9999999999L;
